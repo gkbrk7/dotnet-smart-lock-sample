@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MediatR;
+using SampleSmartLockApp.Application.Enums;
 using SampleSmartLockApp.Application.Features.AccessPermissionHistories.Commands;
 using SampleSmartLockApp.Application.Features.AccessPermissions.Commands.Create;
 using SampleSmartLockApp.Application.Interfaces;
@@ -18,16 +19,26 @@ namespace SampleSmartLockApp.Application.Features.Locks.Queries.OpenLock
         private readonly IAccessPermissionRepositoryAsync _accessPermissionRepository = accessPermissionRepository;
         private readonly IMediator _mediator = mediator;
         private readonly ILockRepositoryAsync _lockRepository = lockRepository;
+        private readonly IList<UserRoles> privilegedRoles = [UserRoles.Administrator, UserRoles.OfficeManager, UserRoles.OfficeManager];
 
         public async Task<ApiResponse<string>> Handle(OpenLockByIdQuery request, CancellationToken cancellationToken)
         {
             var userId = Guid.Parse(_authenticatedUserService.UserId);
+            var userRoles = _authenticatedUserService.Roles;
 
             var lockExists = await CheckLockExists(request);
             if (!lockExists)
                 return ApiResponse<string>.Fail("Lock not found.");
 
-            var (userHasPermission, permission) = await CheckUserHasPermission(request, userId);
+            var (userHasPermission, privileged, permission) = await CheckUserHasPermission(request, userId, userRoles);
+            if (privileged)
+            {
+                var command = new CreateAccessPermissionsHistoryCommand(userId, request.LockId, DateTimeOffset.UtcNow, false, $"User has no permission to the lock to perform this action.");
+
+                await _mediator.Send(command, cancellationToken);
+                return ApiResponse<string>.Fail(command.Message!);
+            }
+
             if (!userHasPermission || permission is null)
             {
                 var command = new CreateAccessPermissionsHistoryCommand(userId, request.LockId, DateTimeOffset.UtcNow, false, $"User has no permission to the lock to perform this action.");
@@ -66,11 +77,14 @@ namespace SampleSmartLockApp.Application.Features.Locks.Queries.OpenLock
             return ApiResponse<string>.Success(commandForCreateHistory.Message!);
         }
 
-        private async Task<(bool, AccessPermission?)> CheckUserHasPermission(OpenLockByIdQuery request, Guid userId)
+        private async Task<(bool, bool, AccessPermission?)> CheckUserHasPermission(OpenLockByIdQuery request, Guid userId, IEnumerable<UserRoles> userRoles)
         {
             var accessPermission = await _accessPermissionRepository.GetLockAccessOfUser(userId, request.LockId);
-            if (accessPermission is null) return (false, accessPermission);
-            return (true, accessPermission);
+            if (userRoles.Any(privilegedRoles.Contains))
+                return (false, true, accessPermission);
+
+            if (accessPermission is null) return (false, false, accessPermission);
+            return (true, false, accessPermission);
         }
 
         private async Task<bool> CheckLockExists(OpenLockByIdQuery request)

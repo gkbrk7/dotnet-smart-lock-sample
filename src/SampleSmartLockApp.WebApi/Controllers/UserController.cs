@@ -5,7 +5,7 @@ using SampleSmartLockApp.Application.Features.Users.Queries.GetAllUsers;
 
 namespace SampleSmartLockApp.WebApi.Controllers;
 
-[Authorize]
+[Authorize(Roles = "Administrator, Director, OfficeManager")]
 [ApiVersion("1.0")]
 public class UserController : BaseApiController
 {
