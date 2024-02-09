@@ -1,6 +1,9 @@
 using MediatR;
+using Microsoft.Extensions.Options;
+using SampleSmartLockApp.Application.Enums;
 using SampleSmartLockApp.Application.Features.Locks.Queries.OpenLock;
 using SampleSmartLockApp.Application.Interfaces;
+using SampleSmartLockApp.Domain.Settings;
 
 namespace SampleSmartLockApp.Application.Tests.Features.Locks.Queries
 {
@@ -10,12 +13,17 @@ namespace SampleSmartLockApp.Application.Tests.Features.Locks.Queries
         private readonly Mock<IAuthenticatedUserService> authenticatedUserService = new();
         private readonly Mock<IAccessPermissionRepositoryAsync> accessPermissionRepository = new();
         private readonly Mock<IMediator> mediator = new();
+        private readonly Mock<IOptions<LockAccessOptions>> options = new();
 
         [Fact]
         public async void GetByLockIdWithOfficeAsyncMethodWithNullResultShouldReturnApiResponseFail()
         {
             // Arrange
             var query = new OpenLockByIdQuery(Guid.NewGuid());
+
+            options.Setup(o => o.Value).Returns(new LockAccessOptions());
+
+            authenticatedUserService.Setup(a => a.UserId).Returns(Guid.NewGuid().ToString());
 
             lockRepository
                 .Setup(ap => ap.GetByIdAsync(It.IsAny<Guid>()))
@@ -32,7 +40,7 @@ namespace SampleSmartLockApp.Application.Tests.Features.Locks.Queries
                 .Returns(Task.CompletedTask)
                 .Verifiable();
 
-            var handler = new OpenLockByIdQueryHandler(authenticatedUserService.Object, accessPermissionRepository.Object, mediator.Object, lockRepository.Object);
+            var handler = new OpenLockByIdQueryHandler(authenticatedUserService.Object, accessPermissionRepository.Object, mediator.Object, lockRepository.Object, options.Object);
 
             // Act
             var result = await handler.Handle(query, CancellationToken.None);

@@ -23,7 +23,7 @@ namespace SampleSmartLockApp.Application.Tests.Features.Locks.Queries
             var result = await handler.Handle(query, CancellationToken.None);
 
             // Assert
-            result.Message!.Should().Be("No records found!");
+            result.Message!.Should().Be("No records found.");
             result.PageNumber!.Should().Be(1);
             result.PageSize!.Should().Be(10);
             result.Succeeded.Should().Be(false);
