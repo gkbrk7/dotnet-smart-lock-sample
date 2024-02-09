@@ -35,7 +35,7 @@ namespace SampleSmartLockApp.Application.Features.Locks.Queries.OpenLock
             var (userHasPermission, privileged, permission) = await CheckUserHasPermission(request, userId, userRoles);
             if (privileged)
             {
-                var message = userHasPermission ? "The lock has been opened successfully." : "The lock has been opened without permission due to privileged accesss.";
+                var message = userHasPermission ? "The lock has been opened successfully." : "The lock has been opened without permission due to privileged access.";
                 var command = new CreateAccessPermissionsHistoryCommand(userId, request.LockId, DateTimeOffset.UtcNow, true, message);
 
                 await _mediator.Send(command, cancellationToken);
@@ -83,7 +83,7 @@ namespace SampleSmartLockApp.Application.Features.Locks.Queries.OpenLock
         private async Task<(bool, bool, AccessPermission?)> CheckUserHasPermission(OpenLockByIdQuery request, Guid userId, IEnumerable<UserRoles> userRoles)
         {
             var accessPermission = await _accessPermissionRepository.GetLockAccessOfUser(userId, request.LockId);
-            if (userRoles.Any(privilegedRoles.Contains))
+            if (privilegedRoles.Any(userRoles.Contains))
                 return (false, true, accessPermission);
 
             if (accessPermission is null) return (false, false, accessPermission);
