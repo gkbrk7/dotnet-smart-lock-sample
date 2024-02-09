@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MediatR;
+using Microsoft.Extensions.Options;
 using SampleSmartLockApp.Application.Enums;
 using SampleSmartLockApp.Application.Features.AccessPermissionHistories.Commands;
 using SampleSmartLockApp.Application.Features.AccessPermissions.Commands.Create;
@@ -10,16 +11,17 @@ using SampleSmartLockApp.Application.Interfaces;
 using SampleSmartLockApp.Application.Interfaces.Repositories;
 using SampleSmartLockApp.Application.Wrappers;
 using SampleSmartLockApp.Domain.Entities;
+using SampleSmartLockApp.Domain.Settings;
 
 namespace SampleSmartLockApp.Application.Features.Locks.Queries.OpenLock
 {
-    public class OpenLockByIdQueryHandler(IAuthenticatedUserService authenticatedUserService, IAccessPermissionRepositoryAsync accessPermissionRepository, IMediator mediator, ILockRepositoryAsync lockRepository) : IRequestHandler<OpenLockByIdQuery, ApiResponse<string>>
+    public class OpenLockByIdQueryHandler(IAuthenticatedUserService authenticatedUserService, IAccessPermissionRepositoryAsync accessPermissionRepository, IMediator mediator, ILockRepositoryAsync lockRepository, IOptions<LockAccessOptions> lockAccessOptions) : IRequestHandler<OpenLockByIdQuery, ApiResponse<string>>
     {
         private readonly IAuthenticatedUserService _authenticatedUserService = authenticatedUserService;
         private readonly IAccessPermissionRepositoryAsync _accessPermissionRepository = accessPermissionRepository;
         private readonly IMediator _mediator = mediator;
         private readonly ILockRepositoryAsync _lockRepository = lockRepository;
-        private readonly IList<UserRoles> privilegedRoles = [UserRoles.Administrator, UserRoles.OfficeManager, UserRoles.OfficeManager];
+        private readonly IEnumerable<UserRoles> privilegedRoles = lockAccessOptions.Value.PrivilegedRoles;
 
         public async Task<ApiResponse<string>> Handle(OpenLockByIdQuery request, CancellationToken cancellationToken)
         {
@@ -33,10 +35,11 @@ namespace SampleSmartLockApp.Application.Features.Locks.Queries.OpenLock
             var (userHasPermission, privileged, permission) = await CheckUserHasPermission(request, userId, userRoles);
             if (privileged)
             {
-                var command = new CreateAccessPermissionsHistoryCommand(userId, request.LockId, DateTimeOffset.UtcNow, false, $"User has no permission to the lock to perform this action.");
+                var message = userHasPermission ? "The lock has been opened successfully." : "The lock has been opened without permission due to privileged accesss.";
+                var command = new CreateAccessPermissionsHistoryCommand(userId, request.LockId, DateTimeOffset.UtcNow, true, message);
 
                 await _mediator.Send(command, cancellationToken);
-                return ApiResponse<string>.Fail(command.Message!);
+                return ApiResponse<string>.Success(command.Message!);
             }
 
             if (!userHasPermission || permission is null)

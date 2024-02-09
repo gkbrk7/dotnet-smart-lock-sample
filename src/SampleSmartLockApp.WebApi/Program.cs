@@ -1,3 +1,5 @@
+using SampleSmartLockApp.Domain.Settings;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddAuthorizationBuilder();
@@ -17,7 +19,7 @@ builder.Services.AddApplication(builder.Configuration);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerExtension();
 
-
+builder.Services.AddOptions<LockAccessOptions>().BindConfiguration(nameof(LockAccessOptions));
 builder.Services.AddScoped<IAuthorizationHandler, TestAuthorizeAttributeHandler>();
 builder.Services.AddScoped<IAuthenticatedUserService, AuthenticatedUserService>();
 builder.Services.AddControllers();
