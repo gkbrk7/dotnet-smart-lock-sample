@@ -17,7 +17,6 @@ namespace SampleSmartLockApp.Application.Features.Users.GetAllUserRoles.Queries
         public async Task<ApiResponse<IEnumerable<GetAllUserRolesViewModel>>> Handle(GetAllUserRolesQuery request, CancellationToken cancellationToken)
         {
             var roles = await _roleManager.Roles
-                .Where(r => r.Name == UserRoles.Administrator.ToString())
                 .Select(r => new GetAllUserRolesViewModel(r.Id, r.Name!))
                 .ToListAsync(cancellationToken: cancellationToken);
 

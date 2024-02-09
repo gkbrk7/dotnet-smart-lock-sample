@@ -10,7 +10,13 @@ namespace SampleSmartLockApp.Application.Features.Users.Commands
     {
         public AddUserToRoleCommandValidator()
         {
+            RuleFor(x => x.UserId)
+                .NotEmpty()
+                .WithMessage("{PropertyName} is required.");
 
+            RuleFor(x => x.RoleId)
+                .NotEmpty()
+                .WithMessage("{PropertyName} is required.");
         }
     }
 }
